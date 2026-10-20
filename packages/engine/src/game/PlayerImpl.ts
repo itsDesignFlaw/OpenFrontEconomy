@@ -238,8 +238,13 @@ export class PlayerImpl implements Player {
   packResources(out: number[]): void {
     const res = this._resources;
     if (!res.dirty) return;
-    // Fed fraction and starvation rate are filled in by the continuous-rate change.
-    out.push(this._smallID, res.growthMultiplier, res.shortageMask, 1, 0);
+    out.push(
+      this._smallID,
+      res.growthMultiplier,
+      res.shortageMask,
+      res.fedMin(),
+      res.starveRate,
+    );
     for (let r = 0; r < NUM_RESOURCES; r++) {
       out.push(res.stock[r], res.net[r], res.production[r], res.consumption[r]);
     }

@@ -18,7 +18,16 @@ import type {
 
 export const PlayerResourcesSnapshot = snapshotType({
   name: "PlayerResources",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 had no fed fraction or starvation rate: fully fed, none starving.
+    1: (d) => ({
+      ...d,
+      fed: new Array(NUM_RESOURCES).fill(1),
+      starveRate: 0,
+      structuralNeed: new Array(NUM_RESOURCES).fill(0),
+    }),
+  },
   schema: z.object({
     terrainCounts: z.array(zInt()),
     stock: z.array(zNum()),
@@ -27,6 +36,9 @@ export const PlayerResourcesSnapshot = snapshotType({
     consumption: z.array(zNum()),
     levels: z.array(zNum()),
     unfedPerUnit: z.array(zNum()),
+    fed: z.array(zNum()),
+    starveRate: zNum(),
+    structuralNeed: z.array(zNum()),
     growthMultiplier: zNum(),
     shortageMask: zInt(),
     homeShare: zNum(),
@@ -49,6 +61,9 @@ export function defaultPlayerResourcesData(phase = 0): PlayerResourcesState {
     consumption: new Array(NUM_RESOURCES).fill(0),
     levels: new Array(NUM_RESOURCES).fill(1),
     unfedPerUnit: new Array(NUM_RESOURCES).fill(0),
+    fed: new Array(NUM_RESOURCES).fill(1),
+    starveRate: 0,
+    structuralNeed: new Array(NUM_RESOURCES).fill(0),
     growthMultiplier: 1,
     shortageMask: 0,
     homeShare: 1,
@@ -71,9 +86,15 @@ export class PlayerResources {
   consumption: Float64Array = new Float64Array(NUM_RESOURCES);
   /** Per-resource smoothed level (food = satiation), init 1. */
   levels: Float64Array = new Float64Array(NUM_RESOURCES).fill(1);
+  /** Per-resource smoothed fed fraction in [0, 1], init 1. */
+  fed: Float64Array = new Float64Array(NUM_RESOURCES).fill(1);
+  /** Troops lost to shortage per tick (home + away), held between economy ticks. */
+  starveRate = 0;
+  /** Per tick need if every troop counted 1x (UI/AI). */
+  structuralNeed: Float64Array = new Float64Array(NUM_RESOURCES);
   /** Product of the rules' growth factors, init 1. */
   growthMultiplier = 1;
-  /** Bit r set: resource r stock empty and unmet. */
+  /** Bit r set: resource r fed fraction below 0.99. */
   shortageMask = 0;
   /** home/(home + 3*away): split of losses. */
   homeShare = 1;
@@ -97,6 +118,13 @@ export class PlayerResources {
     }
   }
 
+  /** Minimum fed fraction over all resources. */
+  fedMin(): number {
+    let m = 1;
+    for (let i = 0; i < this.fed.length; i++)
+      if (this.fed[i] < m) m = this.fed[i];
+    return m;
+  }
   stockOf(r: ResourceType): number {
     return this.stock[r];
   }
@@ -122,6 +150,9 @@ export class PlayerResources {
       consumption: Array.from(this.consumption),
       levels: Array.from(this.levels),
       unfedPerUnit: Array.from(this.unfedPerUnit),
+      fed: Array.from(this.fed),
+      starveRate: this.starveRate,
+      structuralNeed: Array.from(this.structuralNeed),
       growthMultiplier: this.growthMultiplier,
       shortageMask: this.shortageMask,
       homeShare: this.homeShare,
@@ -142,6 +173,9 @@ export class PlayerResources {
     this.consumption = Float64Array.from(s.consumption);
     this.levels = Float64Array.from(s.levels);
     this.unfedPerUnit = Float64Array.from(s.unfedPerUnit);
+    this.fed = Float64Array.from(s.fed);
+    this.starveRate = s.starveRate;
+    this.structuralNeed = Float64Array.from(s.structuralNeed);
     this.growthMultiplier = s.growthMultiplier;
     this.shortageMask = s.shortageMask;
     this.homeShare = s.homeShare;

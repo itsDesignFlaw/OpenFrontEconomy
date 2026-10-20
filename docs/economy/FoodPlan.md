@@ -211,30 +211,27 @@ export class EconomySystem {
 
 ## 3. Engine rules (what A2 implements)
 
-**Economy tick** (`FoodRule.evaluate`, once per second per player). T = `foodTuning()`. The approach factor k is precomputed in the constructor:
+**Economy tick** (`FoodRule.evaluate`, once per second per player). `T = foodTuning()`, all rates per second (`productionPerTilePerSecond`, `baseProductionPerSecond`, `needPerTroopPerSecond`, `fedApproachPerSecond`, plus satiation and starvation fields); the rule converts them to per tick. Approach factors are precomputed in the constructor with `DetMath.pow`: `k = 1 - pow(1 - satiationApproachPerSecond, intervalSeconds)` and `kFed` likewise from `fedApproachPerSecond`.
 ```
-k = 1 - pow(1 - T.satiationApproachPerSecond, intervalSeconds)   // DetMath.pow
-```
-Each economy tick:
-```
-prod   = T.base + Σ terrainCounts[c] * T.productionPerTile[c]
-if infinite-troops human: level=1, consumption=0, net=prod, unfedPerUnit=0
+prod   = base + Σ terrainCounts[c] * productionPerTile[c]          (per tick)
+infinite-troops human: level=1, fed=1, consumption=0, net=prod
 need   = c * (home + 3*away)
 target = need > 0 ? clamp(prod/need, 0.5, 1.5) : 1.5
-level += (target - level) * k
-cons   = need * level
-net    = prod - cons
+level += (target - level) * k                                      (satiation)
+consNeeded = need * level
+fTarget = consNeeded > 0 ? min(1, (prod + stock/intervalTicks) / consNeeded) : 1
+fed    += (fTarget - fed) * kFed                                   (fed fraction)
+cons   = consNeeded * fed;  net = prod - cons
+starveRate += starvationLossPerSecond/10 * (home + 3*away) * (1 - fed)   (troops per tick, held)
+structuralNeed = c * (home + away)
 ctx.growthMultiplier *= level
-unfedPerUnit = need > 0 ? 1 / (c * level) : 0
-homeShare    = (home + 3*away) > 0 ? home / (home + 3*away) : 1
+homeShare = home / (home + 3*away)
 ```
+Short (shortage bit) means `fed < 0.99`. With a stockpile `fed` stays 1; it falls smoothly only as the stock nears empty, and at a starving equilibrium stock is about 0 and `fed` settles at the production/need ratio.
 
-**Every tick** (`applyTick`):
-- For each r in eval order: `stock += net`.
-  - If `stock < 0`: `unmet = -stock`, `stock = 0`, set shortage bit r. Then `loss = unmet * unfedPerUnit * starvationLossPerSecond / 10`, `lossAccHome += loss*homeShare`, `lossAccAway += loss*(1-homeShare)`.
-  - If the shortage bit is set and `stock > 0`, clear it.
-  - Any change to the shortage bits sets `dirty`.
-- If `lossAccHome >= 1`: remove `floor` of it with `removeTroops`, add the removed amount to `starved`, keep the remainder.
+**Every tick** (`applyTick`): `stock = max(0, stock + net)`; `lossAccHome += starveRate*homeShare`, `lossAccAway += starveRate*(1-homeShare)`; if `lossAccHome >= 1`, remove `floor` of it with `removeTroops`, add it to `starved`, keep the remainder. Troop growth uses `growthMultiplier * min(fed)`; `netTroopRate(base, growthMult, fed, starveRate)` is the combined net.
+
+**Bot pressure** (`resourcePressure`): per resource `support = production/structuralNeed`, `landGap = clamp((1-support)/0.5, 0, 1)`, `buffer = clamp(stock/(structuralNeed*ticksPerSecond*120), 0, 1)`, `pressure = landGap*(1-buffer)`; max over resources. Troops going away do not change it.
 
 **At each economy tick, before evaluating:**
 - Spread `floor(lossAccAway)` over the outgoing attacks, then the boats, in proportion to their troops and in array order (deterministic).

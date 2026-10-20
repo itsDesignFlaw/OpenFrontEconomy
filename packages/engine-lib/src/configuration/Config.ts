@@ -93,8 +93,9 @@ export interface FoodTuning {
   satiationMin: number; // 0.5
   satiationMax: number; // 1.5
   satiationApproachPerSecond: number; // share of the gap to target closed per second
+  fedApproachPerSecond: number; // share of the gap to the fed target closed per second
   startingStockpileSeconds: number; // seconds of base need at start troops
-  starvationLossPerSecond: number; // share of unfed troops lost per second
+  starvationLossPerSecond: number; // share of unfed (weighted) troops lost per second at fed = 0
 }
 export const ECONOMY_INTERVAL_TICKS = 10;
 const FOOD_DEFAULTS: FoodTuning = Object.freeze({
@@ -105,6 +106,7 @@ const FOOD_DEFAULTS: FoodTuning = Object.freeze({
   satiationMin: 0.5,
   satiationMax: 1.5,
   satiationApproachPerSecond: 0.2,
+  fedApproachPerSecond: 0.3,
   startingStockpileSeconds: 180,
   starvationLossPerSecond: 0.02,
 });

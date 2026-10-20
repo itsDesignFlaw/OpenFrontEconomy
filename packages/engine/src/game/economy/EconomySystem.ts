@@ -10,22 +10,26 @@ import { FoodRule } from "./FoodRule";
 import type { PlayerResources } from "./PlayerResources";
 
 const TICKS_PER_SECOND = 10;
+/** Fed fraction below which a resource counts as short. */
+const SHORT_FED = 0.99;
 
 export interface EconomyContext {
   player: Player;
   troopsHome: number;
   troopsAway: number;
   intervalSeconds: number;
+  intervalTicks: number;
   /** Rules multiply their growth factor in. */
   growthMultiplier: number;
 }
 
 export interface ResourceRule {
   readonly type: ResourceType;
-  /** Fills production/consumption/net/levels/unfedPerUnit[type]. */
+  /**
+   * Fills production/consumption/net/levels/fed/structuralNeed[type], sets
+   * homeShare and adds its per tick starvation to res.starveRate.
+   */
   evaluate(ctx: EconomyContext, res: PlayerResources): void;
-  /** Troops lost this tick to an unmet need. */
-  shortageTroopLoss(res: PlayerResources, unmet: number): number;
 }
 
 export class EconomySystem {
@@ -40,6 +44,7 @@ export class EconomySystem {
     troopsHome: 0,
     troopsAway: 0,
     intervalSeconds: 0,
+    intervalTicks: 0,
     growthMultiplier: 1,
   };
 
@@ -47,6 +52,7 @@ export class EconomySystem {
     this.intervalTicks = config.economyIntervalTicks();
     this.intervalSeconds = this.intervalTicks / TICKS_PER_SECOND;
     this.ctx.intervalSeconds = this.intervalSeconds;
+    this.ctx.intervalTicks = this.intervalTicks;
     for (const r of RESOURCE_EVAL_ORDER) {
       if (!config.isResourceEnabled(r)) continue;
       switch (r) {
@@ -92,34 +98,29 @@ export class EconomySystem {
     ctx.troopsHome = player.troops();
     ctx.troopsAway = away;
     ctx.growthMultiplier = 1;
+    res.starveRate = 0;
     for (let i = 0; i < this.rules.length; i++) {
       this.rules[i].evaluate(ctx, res);
     }
     res.growthMultiplier = ctx.growthMultiplier;
+    let mask = 0;
+    for (let i = 0; i < this.rules.length; i++) {
+      const r = this.rules[i].type;
+      if (res.fed[r] < SHORT_FED) mask |= 1 << r;
+    }
+    res.shortageMask = mask;
     ctx.player = null as unknown as Player;
   }
 
   private applyTick(player: Player, res: PlayerResources): void {
-    let mask = res.shortageMask;
     for (let i = 0; i < this.rules.length; i++) {
-      const rule = this.rules[i];
-      const r = rule.type;
-      let stock = res.stock[r] + res.net[r];
-      if (stock < 0) {
-        const unmet = -stock;
-        stock = 0;
-        mask |= 1 << r;
-        const loss = rule.shortageTroopLoss(res, unmet);
-        res.lossAccHome += loss * res.homeShare;
-        res.lossAccAway += loss * (1 - res.homeShare);
-      } else if (stock > 0) {
-        mask &= ~(1 << r);
-      }
-      res.stock[r] = stock;
+      const r = this.rules[i].type;
+      const stock = res.stock[r] + res.net[r];
+      res.stock[r] = stock > 0 ? stock : 0;
     }
-    if (mask !== res.shortageMask) {
-      res.shortageMask = mask;
-      res.dirty = true;
+    if (res.starveRate > 0) {
+      res.lossAccHome += res.starveRate * res.homeShare;
+      res.lossAccAway += res.starveRate * (1 - res.homeShare);
     }
     if (res.lossAccHome >= 1) {
       const whole = Math.floor(res.lossAccHome);

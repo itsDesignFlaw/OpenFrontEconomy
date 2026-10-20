@@ -133,7 +133,8 @@ export class PlayerExecution implements Execution {
         ? troopInc
         : this.config.effectiveTroopIncreaseRate(
             troopInc,
-            this.player.resources().growthMultiplier,
+            this.player.resources().growthMultiplier *
+              this.player.resources().fedMin(),
           ),
     );
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

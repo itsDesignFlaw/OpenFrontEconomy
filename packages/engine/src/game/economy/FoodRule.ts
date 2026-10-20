@@ -14,6 +14,8 @@ export class FoodRule implements ResourceRule {
   private readonly t: FoodTuning;
   /** Share of the satiation gap closed per economy tick. */
   private readonly k: number;
+  /** Share of the fed gap closed per economy tick. */
+  private readonly kFed: number;
   private readonly lossPerTick: number;
   /** Config rates are per second; internal state and hot paths use per tick. */
   private readonly baseProdPerTick: number;
@@ -26,6 +28,7 @@ export class FoodRule implements ResourceRule {
   ) {
     this.t = config.foodTuning();
     this.k = 1 - pow(1 - this.t.satiationApproachPerSecond, intervalSeconds);
+    this.kFed = 1 - pow(1 - this.t.fedApproachPerSecond, intervalSeconds);
     this.lossPerTick = this.t.starvationLossPerSecond / TICKS_PER_SECOND;
     const secondsPerTick = config.msPerTick() / 1000;
     this.baseProdPerTick = this.t.baseProductionPerSecond * secondsPerTick;
@@ -48,6 +51,8 @@ export class FoodRule implements ResourceRule {
       res.levels[FOOD] = 1;
       res.consumption[FOOD] = 0;
       res.net[FOOD] = prod;
+      res.fed[FOOD] = 1;
+      res.structuralNeed[FOOD] = 0;
       res.unfedPerUnit[FOOD] = 0;
       res.homeShare = 1;
       return;
@@ -63,16 +68,23 @@ export class FoodRule implements ResourceRule {
     }
     const level = res.levels[FOOD] + (target - res.levels[FOOD]) * this.k;
     res.levels[FOOD] = level;
-    const cons = need * level;
+    const consNeeded = need * level;
+    let fTarget = 1;
+    if (consNeeded > 0) {
+      const available = prod + res.stock[FOOD] / ctx.intervalTicks;
+      fTarget = Math.min(1, available / consNeeded);
+    }
+    const f = res.fed[FOOD] + (fTarget - res.fed[FOOD]) * this.kFed;
+    res.fed[FOOD] = f;
+    const cons = consNeeded * f;
     res.consumption[FOOD] = cons;
     res.net[FOOD] = prod - cons;
+    res.structuralNeed[FOOD] =
+      this.needPerTroopPerTick * (ctx.troopsHome + ctx.troopsAway);
     ctx.growthMultiplier *= level;
+    res.starveRate += this.lossPerTick * weighted * (1 - f);
     res.unfedPerUnit[FOOD] =
       need > 0 ? 1 / (this.needPerTroopPerTick * level) : 0;
     res.homeShare = weighted > 0 ? ctx.troopsHome / weighted : 1;
-  }
-
-  shortageTroopLoss(res: PlayerResources, unmet: number): number {
-    return unmet * res.unfedPerUnit[FOOD] * this.lossPerTick;
   }
 }

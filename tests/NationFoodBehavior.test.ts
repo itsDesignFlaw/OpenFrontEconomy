@@ -40,19 +40,20 @@ async function world(food: boolean, type: PlayerType = PlayerType.Nation) {
 
 function hunger(p: Player, level: "fed" | "short" | "half") {
   const r = p.resources();
+  r.structuralNeed[F] = 1;
   if (level === "fed") {
-    r.net[F] = 1;
+    r.production[F] = 2;
     r.stock[F] = 1000;
     r.shortageMask = 0;
   } else if (level === "short") {
+    r.production[F] = 0;
     r.shortageMask = 1 << F;
     r.stock[F] = 0;
-    r.net[F] = -1;
   } else {
-    // runway 60s at 10 ticks/s -> pressure 0.5
+    // land gap 1, stock buffer 600 / (1 * 10 * 120) = 0.5 -> pressure 0.5
+    r.production[F] = 0;
     r.shortageMask = 0;
     r.stock[F] = 600;
-    r.net[F] = -1;
   }
 }
 
@@ -67,7 +68,7 @@ describe("ResourceAdvisor", () => {
     expect(resourceValuePerTile(game, a)).toBe(0);
   });
 
-  it("scales pressure by runway", async () => {
+  it("scales pressure by land gap and stock buffer", async () => {
     const { game, me, a } = await world(true);
     hunger(me, "fed");
     expect(resourcePressure(game, me)).toBe(0);
@@ -125,10 +126,10 @@ describe("nation food behavior", () => {
     ) as any;
     hunger(w.me, "fed");
     expect(nsb.tooHungryForCities()).toBe(false);
-    w.me.resources().stock[F] = 1080; // runway 108s -> 0.1
-    w.me.resources().net[F] = -1;
+    w.me.resources().stock[F] = 1080; // buffer 0.9 -> 0.1
+    w.me.resources().production[F] = 0;
     expect(nsb.tooHungryForCities()).toBe(false);
-    w.me.resources().stock[F] = 900; // 90s -> 0.25
+    w.me.resources().stock[F] = 900; // buffer 0.75 -> 0.25
     expect(nsb.tooHungryForCities()).toBe(true);
     hunger(w.me, "fed");
     expect(nsb.tooHungryForCities()).toBe(false);
