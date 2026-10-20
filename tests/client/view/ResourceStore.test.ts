@@ -70,6 +70,7 @@ describe("ResourceStore", () => {
 
   it("returns defaults for unknown players and undefined buffers", () => {
     const s = new ResourceStore();
+    // eslint-disable-next-line prefer-spread
     s.apply(undefined, 1);
     expect(s.has(9)).toBe(false);
     expect(s.stock(9, ResourceType.Food, 5)).toBe(0);
