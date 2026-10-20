@@ -643,9 +643,6 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               <img src=${goldCoinIcon} width="13" height="13" />
               <span class="px-0.5">${renderNumber(player.gold())}</span>
             </div>
-            ${this.game.config().resourcesEnabled()
-              ? renderResourceChips(player, "compact")
-              : ""}
             <div
               class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
               0
@@ -668,6 +665,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               >
             </div>
           </div>
+          ${this.game.config().resourcesEnabled()
+            ? html`<div
+                class="resource-row flex flex-wrap items-center gap-1 min-w-0"
+              >
+                ${renderResourceChips(player, "compact", (r) =>
+                  this.game.config().isResourceEnabled(r),
+                )}
+              </div>`
+            : ""}
           <div class="w-28 md:w-36" translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>

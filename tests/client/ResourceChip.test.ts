@@ -18,6 +18,8 @@ function makeGame(enabled: boolean, short: boolean): GameView {
     resourceProductionPerSecond: () => 1,
     resourceConsumptionPerSecond: () => 4,
     isResourceShort: () => short,
+    resourceFed: () => 1,
+    starvationPerTick: () => 0,
   };
   return {
     inSpawnPhase: () => false,

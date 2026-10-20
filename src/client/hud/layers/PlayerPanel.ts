@@ -707,8 +707,10 @@ export class PlayerPanel extends LitElement implements Controller {
         </div>
       </div>
       ${this.g.config().resourcesEnabled()
-        ? html`<div class="mb-1 flex gap-2">
-            ${renderResourceChips(other, "panel")}
+        ? html`<div class="mb-1 flex flex-wrap gap-2">
+            ${renderResourceChips(other, "panel", (r) =>
+              this.g.config().isResourceEnabled(r),
+            )}
           </div>`
         : ""}
     `;

@@ -17,9 +17,32 @@ import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
-import { renderResourceChips } from "../ResourceReadout";
+import {
+  isStarving,
+  renderResourceChips,
+  renderStarvingTag,
+} from "../ResourceReadout";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+
+const NET_RATE_EMA_ALPHA = 0.1;
+const POP_BORDER = {
+  green: "border-green-400",
+  orange: "border-orange-400",
+  red: "border-red-500",
+};
+const POP_TEXT = {
+  green: "text-green-400",
+  orange: "text-orange-400",
+  red: "text-red-400",
+};
+const POP_FILTER = {
+  green:
+    "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)",
+  orange:
+    "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)",
+  red: "brightness(0) saturate(100%) invert(38%) sepia(80%) saturate(2500%) hue-rotate(340deg) brightness(95%)",
+};
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -63,6 +86,12 @@ export class ControlPanel extends LitElement implements Controller {
   private _tutorialHighlight: TutorialHighlight | null = null;
 
   private _troopRateIsIncreasing: boolean = true;
+
+  // Display-only EMA (~1 s at 10 ticks/s) of the net troop rate so per-tick
+  // changes in base growth do not flicker. Null until the first sample.
+  private _smoothedNetRate: number | null = null;
+  @state()
+  private _starving = false;
 
   private _lastTroopIncreaseRate: number;
 
@@ -135,11 +164,30 @@ export class ControlPanel extends LitElement implements Controller {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate =
-      config.effectiveTroopIncreaseRate(
-        config.troopIncreaseRate(player),
-        player.growthMultiplier(),
-      ) * 10;
+    if (config.resourcesEnabled()) {
+      const net =
+        config.netTroopRate(
+          config.troopIncreaseRate(player),
+          player.growthMultiplier(),
+          player.resourceFed(),
+          player.starvationPerTick(),
+        ) * 10;
+      this._smoothedNetRate =
+        this._smoothedNetRate === null
+          ? net
+          : this._smoothedNetRate +
+            (net - this._smoothedNetRate) * NET_RATE_EMA_ALPHA;
+      this.troopRate = this._smoothedNetRate;
+      this._starving = isStarving(player);
+    } else {
+      this._smoothedNetRate = null;
+      this._starving = false;
+      this.troopRate =
+        config.effectiveTroopIncreaseRate(
+          config.troopIncreaseRate(player),
+          player.growthMultiplier(),
+        ) * 10;
+    }
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -425,11 +473,10 @@ export class ControlPanel extends LitElement implements Controller {
               class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
             />
             <span
-              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${this
-                ._troopRateIsIncreasing
-                ? "text-green-400"
-                : "text-orange-400"}"
-              >+${renderTroops(this.troopRate)}/s</span
+              class="pop-gain text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${POP_TEXT[
+                this.popGainTone()
+              ]}"
+              >${this.popGainText()}</span
             >
           </div>
         </div>
@@ -507,12 +554,25 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private popGainTone(): "green" | "red" | "orange" {
+    if (this._smoothedNetRate !== null) {
+      return this._smoothedNetRate < 0 ? "red" : "green";
+    }
+    return this._troopRateIsIncreasing ? "green" : "orange";
+  }
+
+  private popGainText(): string {
+    const rate = this.troopRate ?? 0;
+    return `${rate < 0 ? "-" : "+"}${renderTroops(Math.abs(rate))}/s`;
+  }
+
   private renderResourceRow() {
     const player = this.game?.myPlayer();
     if (!player || !this.game.config().resourcesEnabled()) return "";
     const config = this.game.config();
-    return html`<div class="flex gap-1.5 items-center mb-1">
+    return html`<div class="resource-row flex gap-1.5 items-center mb-1">
       ${renderResourceChips(player, "hud", (r) => config.isResourceEnabled(r))}
+      ${this._starving ? renderStarvingTag() : ""}
     </div>`;
   }
 
@@ -525,9 +585,7 @@ export class ControlPanel extends LitElement implements Controller {
         <div
           class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
             "troop_rate",
-          )} ${this._troopRateIsIncreasing
-            ? "border-green-400"
-            : "border-orange-400"}"
+          )} ${POP_BORDER[this.popGainTone()]}"
           translate="no"
         >
           <img
@@ -537,15 +595,13 @@ export class ControlPanel extends LitElement implements Controller {
             width="13"
             height="13"
             class="shrink-0"
-            style="filter: ${this._troopRateIsIncreasing
-              ? "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)"
-              : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"}"
+            style="filter: ${POP_FILTER[this.popGainTone()]}"
           />
           <span
-            class="text-sm font-bold tabular-nums ${this._troopRateIsIncreasing
-              ? "text-green-400"
-              : "text-orange-400"}"
-            >+${renderTroops(this.troopRate)}/s</span
+            class="pop-gain text-sm font-bold tabular-nums ${POP_TEXT[
+              this.popGainTone()
+            ]}"
+            >${this.popGainText()}</span
           >
         </div>
         <!-- Troop bar -->
