@@ -8,8 +8,6 @@ import { Game, Player } from "../../game/Game";
 
 /** Runway (seconds) at or above which a resource exerts no pressure. */
 export const PRESSURE_RUNWAY_SECONDS = 120;
-/** Per-tick net is applied every tick; the simulation runs at 10 ticks per second. */
-const TICKS_PER_SECOND = 10;
 /** Save-up thresholds are multiplied by 1 - k * pressure. */
 export const HUNGER_THRESHOLD_SCALE_K = 0.5;
 /** Pressure at or above which a nation stops building cities. */
@@ -24,7 +22,7 @@ export function resourcePressure(game: Game, p: Player): number {
   for (let r = 0 as ResourceType; r < NUM_RESOURCES; r++) {
     if (!cfg.isResourceEnabled(r)) continue;
     if (res.isShort(r)) return 1;
-    const runway = res.runwaySeconds(r, TICKS_PER_SECOND);
+    const runway = res.runwaySeconds(r, 1000 / cfg.msPerTick());
     if (runway === Infinity) continue;
     const v = Math.min(1, Math.max(0, 1 - runway / PRESSURE_RUNWAY_SECONDS));
     if (v > pressure) pressure = v;
