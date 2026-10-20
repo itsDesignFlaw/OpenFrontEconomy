@@ -25,10 +25,12 @@ async function world(food: boolean, type: PlayerType = PlayerType.Nation) {
   const me = mk("me", type);
   const a = mk("a", PlayerType.Human);
   const b = mk("b", PlayerType.Human);
-  let i = 0;
+  const owners = [me, a, b];
+  let n = 0;
   game.map().forEachTile((t) => {
     if (!game.map().isLand(t)) return;
-    [me, a, b][i++ % 3].conquer(t);
+    owners[n % 3].conquer(t);
+    n += 1;
   });
   me.addTroops(100_000);
   a.addTroops(1000);

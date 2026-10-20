@@ -59,7 +59,6 @@ import {
   summarizeGcEvents,
   takeFootprintCheckpoint,
 } from "./GcProfiler";
-import { NodeGameMapLoader } from "./NodeGameMapLoader";
 import {
   CpuProfiler,
   ExecutionProfiler,
