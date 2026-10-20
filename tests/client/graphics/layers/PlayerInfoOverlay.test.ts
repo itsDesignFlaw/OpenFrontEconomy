@@ -99,6 +99,7 @@ describe("PlayerInfoOverlay", () => {
     inSpawnPhase: () => false,
     config: () => ({
       isUnitDisabled: () => true,
+      resourcesEnabled: () => false,
       maxTroops: () => 1000,
     }),
     teamClanTag: () => undefined,

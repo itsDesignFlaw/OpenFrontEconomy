@@ -21,6 +21,7 @@ import {
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { ResourceType } from "@openfront/engine-api/game/Resources";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
@@ -447,6 +448,24 @@ export class PlayerView implements PlayerLike {
     return this.state.targets.map(
       (id) => this.game.playerBySmallID(id) as PlayerView,
     );
+  }
+  resourceStock(r: ResourceType): number {
+    return this.game.resources.stock(this.smallID(), r, this.game.ticks());
+  }
+  resourceNetPerSecond(r: ResourceType): number {
+    return this.game.resources.netPerSecond(this.smallID(), r);
+  }
+  resourceProductionPerSecond(r: ResourceType): number {
+    return this.game.resources.productionPerSecond(this.smallID(), r);
+  }
+  resourceConsumptionPerSecond(r: ResourceType): number {
+    return this.game.resources.consumptionPerSecond(this.smallID(), r);
+  }
+  isResourceShort(r: ResourceType): boolean {
+    return this.game.resources.isShort(this.smallID(), r);
+  }
+  growthMultiplier(): number {
+    return this.game.resources.growthMultiplier(this.smallID());
   }
   gold(): Gold {
     // Engine Gold is bigint; renderer state stores number. Convert back at the

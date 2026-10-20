@@ -96,6 +96,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private customAllianceMinutes: number | undefined = undefined;
   @state() private doomsdayClock: boolean = false;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
+  @state() private food: boolean = false;
   @state() private overtime: boolean = false;
   @state() private overtimeStartMinutes: number | undefined = undefined;
   @state() private anonymizeNames: boolean = false;
@@ -711,6 +712,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
+                  {
+                    labelKey: "game_settings.food",
+                    checked: this.food,
+                  },
                   // Host cheats and public listing are mutually exclusive
                   // (the server rejects both combinations), so the controls
                   // disappear while the lobby is listed.
@@ -1037,6 +1042,7 @@ export class HostLobbyModal extends BaseModal {
     this.customAllianceMinutes = undefined;
     this.doomsdayClock = false;
     this.doomsdayClockSpeed = "normal";
+    this.food = false;
     this.overtime = false;
     this.overtimeStartMinutes = undefined;
     this.anonymizeNames = false;
@@ -1149,6 +1155,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
+        this.putGameConfig();
+        break;
+      case "game_settings.food":
+        this.food = checked;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1682,6 +1692,8 @@ export class HostLobbyModal extends BaseModal {
             doomsdayClock: this.doomsdayClock
               ? { enabled: true, speed: this.doomsdayClockSpeed }
               : { enabled: false },
+            // Always explicit (never undefined) so the toggle can turn off.
+            resources: { food: this.food },
             // Same {enabled:false} rule as doomsdayClock above: undefined is
             // dropped by JSON.stringify, so the toggle could never turn off.
             overtime: this.overtime

@@ -118,6 +118,7 @@ const DEFAULT_OPTIONS = {
   customAllianceMinutes: undefined as number | undefined,
   waterNukes: false,
   doomsdayClock: false,
+  food: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
   overtime: false,
   overtimeStartMinutes: undefined as number | undefined,
@@ -207,6 +208,7 @@ export class SinglePlayerModal extends BaseModal {
     DEFAULT_OPTIONS.customAllianceMinutes;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
+  @state() private food: boolean = DEFAULT_OPTIONS.food;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
@@ -555,6 +557,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
+                  {
+                    labelKey: "game_settings.food",
+                    checked: this.food,
+                  },
                 ],
                 inputCards,
               },
@@ -620,6 +626,7 @@ export class SinglePlayerModal extends BaseModal {
       this.customAllianceMinutes !== DEFAULT_OPTIONS.customAllianceMinutes ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
+      this.food !== DEFAULT_OPTIONS.food ||
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
@@ -696,6 +703,7 @@ export class SinglePlayerModal extends BaseModal {
     this.customAllianceMinutes = DEFAULT_OPTIONS.customAllianceMinutes;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
+    this.food = DEFAULT_OPTIONS.food;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
     this.overtime = DEFAULT_OPTIONS.overtime;
     this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
@@ -795,6 +803,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
+        break;
+      case "game_settings.food":
+        this.food = checked;
         break;
       default:
         break;
@@ -1186,6 +1197,7 @@ export class SinglePlayerModal extends BaseModal {
                       },
                     }
                   : {}),
+                ...(this.food ? { resources: { food: true } } : {}),
                 ...(this.overtime
                   ? {
                       overtime: {

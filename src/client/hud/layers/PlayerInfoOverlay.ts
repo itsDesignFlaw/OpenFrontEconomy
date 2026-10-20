@@ -39,6 +39,7 @@ import {
   getPlayerIcons,
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
+import { renderResourceChips } from "../ResourceReadout";
 import { ShowPlayerChatEvent } from "./ChatModal";
 import { ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -642,6 +643,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               <img src=${goldCoinIcon} width="13" height="13" />
               <span class="px-0.5">${renderNumber(player.gold())}</span>
             </div>
+            ${this.game.config().resourcesEnabled()
+              ? renderResourceChips(player, "compact")
+              : ""}
             <div
               class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
               0
