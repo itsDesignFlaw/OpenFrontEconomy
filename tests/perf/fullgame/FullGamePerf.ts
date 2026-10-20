@@ -44,19 +44,11 @@ import {
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
-import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
-import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
-import { simpleHash } from "@openfront/engine-lib/Util";
-import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
-import { Executor } from "@openfront/engine/execution/ExecutionManager";
-import { createGame } from "@openfront/engine/game/GameImpl";
-import { createNationsForGame } from "@openfront/engine/game/NationCreation";
-import { GameRunner } from "@openfront/engine/GameRunner";
-import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import fs from "fs";
 import v8 from "node:v8";
 import path from "path";
 import { fileURLToPath } from "url";
+import { bootstrapGame } from "./Bootstrap";
 import {
   AllocationSampler,
   FootprintCheckpoint,
@@ -98,6 +90,7 @@ interface Options {
   footprint: boolean;
   snapshotAt: number[];
   waterNukes: boolean;
+  food: boolean;
 }
 
 function resolveMap(name: string): GameMapType {
@@ -129,6 +122,7 @@ function parseArgs(argv: string[]): Options {
     footprint: false,
     snapshotAt: [],
     waterNukes: false,
+    food: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -185,6 +179,9 @@ function parseArgs(argv: string[]): Options {
       case "--water-nukes":
         opts.waterNukes = true;
         break;
+      case "--food":
+        opts.food = true;
+        break;
       default:
         throw new Error(`unknown argument: ${arg}`);
     }
@@ -235,6 +232,7 @@ async function main(): Promise<void> {
     instantBuild: false,
     randomSpawn: false,
     waterNukes: opts.waterNukes ? true : undefined,
+    ...(opts.food ? { resources: { food: true } } : {}),
   };
   const gameStart: GameStartInfo = {
     gameID: opts.seed,
@@ -245,46 +243,14 @@ async function main(): Promise<void> {
 
   console.log(
     `Loading map "${opts.map}" (bots=${opts.bots}, nations=${opts.nations}, ` +
-      `seed=${opts.seed}, ticks=${opts.ticks})...`,
+      `seed=${opts.seed}, ticks=${opts.ticks}${opts.food ? ", food=on" : ""})...`,
   );
-
-  // Mirrors createGameRunner(), but assembled by hand so the execution
-  // profiler can be attached before GameRunner.init() adds the initial
-  // executions (nations, bots, spawn timer, win check).
-  const config = new EngineConfig(gameConfig, false);
-  const mapLoader = new NodeGameMapLoader(
-    path.join(PROJECT_ROOT, "resources/maps"),
-  );
-  const terrain = await loadTerrainMap(
-    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
-  );
-  const random = new PseudoRandom(simpleHash(gameStart.gameID));
-  const nations = createNationsForGame(
-    gameStart,
-    terrain.nations,
-    terrain.additionalNations,
-    0,
-    random,
-  );
-  const game = createGame(
-    [],
-    nations,
-    terrain.gameMap,
-    terrain.miniGameMap,
-    config,
-    terrain.teamGameSpawnAreas,
-  );
-
-  const execProfiler = new ExecutionProfiler();
-  if (opts.execProfile) {
-    execProfiler.attach(game);
-  }
 
   let lastHash: HashUpdate | undefined;
   let fatalError: string | undefined;
-  const runner = new GameRunner(
-    game,
-    new Executor(game, gameStart.gameID, undefined),
+  const { config, game, runner } = await bootstrapGame(
+    gameConfig,
+    gameStart.gameID,
     (gu) => {
       if ("errMsg" in gu) {
         fatalError = `${gu.errMsg}\n${gu.stack ?? ""}`;
@@ -296,6 +262,12 @@ async function main(): Promise<void> {
       }
     },
   );
+
+  const execProfiler = new ExecutionProfiler();
+  if (opts.execProfile) {
+    execProfiler.attach(game);
+  }
+
   runner.init();
 
   const gcTracker = opts.gcProfile ? new GcTracker() : null;
