@@ -129,6 +129,11 @@ export function notableLobbySettings(
         `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
       ),
     });
+  if (c.resources?.food)
+    items.push({
+      label: translateText("game_settings.food"),
+      value: enabled,
+    });
   if (c.overtime?.enabled)
     items.push({
       label: translateText("overtime.title"),

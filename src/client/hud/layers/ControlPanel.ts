@@ -17,6 +17,7 @@ import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import { renderResourceChips } from "../ResourceReadout";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -134,7 +135,11 @@ export class ControlPanel extends LitElement implements Controller {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate = config.troopIncreaseRate(player) * 10;
+    this.troopRate =
+      config.effectiveTroopIncreaseRate(
+        config.troopIncreaseRate(player),
+        player.growthMultiplier(),
+      ) * 10;
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -319,7 +324,11 @@ export class ControlPanel extends LitElement implements Controller {
   private updateTroopIncrease() {
     const player = this.game?.myPlayer();
     if (player === null) return;
-    const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
+    const config = this.game.config();
+    const troopIncreaseRate = config.effectiveTroopIncreaseRate(
+      config.troopIncreaseRate(player),
+      player.growthMultiplier(),
+    );
     this._troopRateIsIncreasing =
       troopIncreaseRate >= this._lastTroopIncreaseRate;
     this._lastTroopIncreaseRate = troopIncreaseRate;
@@ -498,6 +507,15 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private renderResourceRow() {
+    const player = this.game?.myPlayer();
+    if (!player || !this.game.config().resourcesEnabled()) return "";
+    const config = this.game.config();
+    return html`<div class="flex gap-1.5 items-center mb-1">
+      ${renderResourceChips(player, "hud", (r) => config.isResourceEnabled(r))}
+    </div>`;
+  }
+
   private renderDesktop() {
     return html`
       ${this.renderNotification()}
@@ -554,6 +572,7 @@ export class ControlPanel extends LitElement implements Controller {
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
       </div>
+      ${this.renderResourceRow()}
       <!-- Row 2: attack ratio | slider -->
       <div
         class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
@@ -609,7 +628,7 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderMobile() {
     return html`
-      ${this.renderNotification()}
+      ${this.renderNotification()} ${this.renderResourceRow()}
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div

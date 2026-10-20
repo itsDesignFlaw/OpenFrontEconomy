@@ -52,6 +52,7 @@ import {
   type PlannedUnits,
 } from "./MotionPlanResolver";
 import { PlayerView } from "./PlayerView";
+import { ResourceStore } from "./ResourceStore";
 import { UnitView } from "./UnitView";
 
 function readCosmeticVisibility(): CosmeticVisibility {
@@ -61,6 +62,7 @@ function readCosmeticVisibility(): CosmeticVisibility {
 export class GameView implements GameLike {
   private lastUpdate: GameUpdateViewData | null;
   private startTick: Tick | null = null;
+  readonly resources = new ResourceStore();
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -384,6 +386,7 @@ export class GameView implements GameLike {
     const stateOf = (smallID: number) => this._playerStates.get(smallID);
     applyPackedPlayerStats(gu.packedPlayerUpdates, stateOf);
     applyPackedAttackTroops(gu.packedAttackUpdates, stateOf);
+    this.resources.apply(gu.packedResourceUpdates, gu.tick);
 
     if (this._myClientID) {
       this._myPlayer ??= this.playerByClientID(this._myClientID);

@@ -60,6 +60,7 @@ describe("control-panel keybind attack ratio and tick visibility", () => {
     panel.game = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => false, troops: () => 0 }),
+      config: () => ({ resourcesEnabled: () => false }),
     } as unknown as GameView;
     panel.setVisibile(true);
 

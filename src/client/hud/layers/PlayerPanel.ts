@@ -44,6 +44,7 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { renderResourceChips } from "../ResourceReadout";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
@@ -705,6 +706,11 @@ export class PlayerPanel extends LitElement implements Controller {
           >
         </div>
       </div>
+      ${this.g.config().resourcesEnabled()
+        ? html`<div class="mb-1 flex gap-2">
+            ${renderResourceChips(other, "panel")}
+          </div>`
+        : ""}
     `;
   }
 
