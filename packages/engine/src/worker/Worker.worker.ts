@@ -141,6 +141,9 @@ function transfersOf(gameUpdates: GameUpdateViewData[]): Transferable[] {
     if (gu.packedAttackUpdates) {
       transfers.push(gu.packedAttackUpdates.buffer);
     }
+    if (gu.packedResourceUpdates) {
+      transfers.push(gu.packedResourceUpdates.buffer);
+    }
     if (gu.packedNukeImpacts) {
       transfers.push(gu.packedNukeImpacts.buffer);
     }

@@ -143,6 +143,9 @@ export const DERIVED_FIELDS = new Set<string>([
   "borderNbuf",
   // PlayerResources
   "dirty",
+  // GameImpl / EconomySystem scratch
+  "resourceRecords",
+  "ctx",
   // PlayerImpl
   "lastSentUpdate",
   "myUnitsMemo",

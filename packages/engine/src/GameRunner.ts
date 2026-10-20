@@ -274,6 +274,7 @@ export class GameRunner {
     const packedMotionPlans = this.game.drainPackedMotionPlans();
     const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
     const packedAttackUpdates = this.game.drainPackedAttackUpdates();
+    const packedResourceUpdates = this.game.drainPackedResourceUpdates();
     const nukeImpactTiles = this.game.drainNukeImpacts();
     const packedNukeImpacts =
       nukeImpactTiles.length > 0 ? new Uint32Array(nukeImpactTiles) : undefined;
@@ -284,6 +285,7 @@ export class GameRunner {
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
       ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
+      ...(packedResourceUpdates ? { packedResourceUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
       updates: updates,
       // A copy: hosts hold several ticks' updates before reading them, and

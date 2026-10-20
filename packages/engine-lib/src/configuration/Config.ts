@@ -311,7 +311,7 @@ export class Config {
     return info;
   }
 
-  private hasInfiniteTroopsFor(player: PlayerLike): boolean {
+  hasInfiniteTroopsFor(player: PlayerLike): boolean {
     if (this.infiniteTroops()) return true;
     return (
       (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&

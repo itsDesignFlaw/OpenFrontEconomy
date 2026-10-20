@@ -28,6 +28,10 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { UnitPredicate } from "@openfront/engine-api/game/ReadViews";
 import {
+  landClassOfMagnitude,
+  NUM_RESOURCES,
+} from "@openfront/engine-api/game/Resources";
+import {
   AllPlayersStats,
   ClientID,
   Winner,
@@ -142,6 +146,8 @@ export class GameImpl implements Game {
   private tileUpdatePairs: number[] = [];
   /** [smallID, tilesOwned, gold, troops] quads — see PlayerImpl.toUpdate. */
   private playerStatsQuads: number[] = [];
+  /** Packed economy records, see Resources.ts. */
+  private resourceRecords: number[] = [];
   /** [smallID, direction, index, troops] quads — see packAttackTroopDeltas. */
   private attackTroopsQuads: number[] = [];
   private motionPlanRecords: MotionPlanRecord[] = [];
@@ -586,6 +592,7 @@ export class GameImpl implements Game {
         this.attackTroopsQuads,
       );
       if (update !== null) this.addUpdate(update);
+      if (this._resourcesOn) player.packResources(this.resourceRecords);
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
@@ -639,7 +646,11 @@ export class GameImpl implements Game {
   }
 
   drainPackedResourceUpdates(): Float64Array | null {
-    return null;
+    const records = this.resourceRecords;
+    if (records.length === 0) return null;
+    const packed = Float64Array.from(records);
+    records.length = 0;
+    return packed;
   }
 
   economy(): EconomySystem | null {
@@ -831,6 +842,14 @@ export class GameImpl implements Game {
     if (this.isImpassable(tile)) {
       throw Error(`cannot conquer impassable terrain`);
     }
+    if (this._resourcesOn) {
+      const cls = landClassOfMagnitude(this._map.magnitude(tile));
+      const prev = this.owner(tile);
+      if (prev.isPlayer()) {
+        (prev as PlayerImpl).resources().terrainCounts[cls]--;
+      }
+      owner.resources().terrainCounts[cls]++;
+    }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
       previousOwner._lastTileChange = this._ticks;
@@ -857,6 +876,11 @@ export class GameImpl implements Game {
     }
 
     const previousOwner = this.owner(tile) as PlayerImpl;
+    if (this._resourcesOn) {
+      previousOwner.resources().terrainCounts[
+        landClassOfMagnitude(this._map.magnitude(tile))
+      ]--;
+    }
     previousOwner._lastTileChange = this._ticks;
     previousOwner._tileChangeVersion++;
     previousOwner._tiles.delete(tile);
@@ -1622,6 +1646,18 @@ export class GameImpl implements Game {
 
       // Record stats
       this.stats().goldWar(conqueror, conquered, goldCaptured);
+    }
+
+    // Resource stockpiles travel with the gold (same rule).
+    if (this._resourcesOn && !skipGoldTransfer) {
+      const from = conquered.resources();
+      const to = conqueror.resources();
+      for (let r = 0; r < NUM_RESOURCES; r++) {
+        to.stock[r] += from.stock[r];
+        from.stock[r] = 0;
+      }
+      from.dirty = true;
+      to.dirty = true;
     }
 
     // OFM: per-kill log for standings (humans-only filtered in recordKill).

@@ -32,6 +32,7 @@ import {
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
+import { NUM_RESOURCES } from "@openfront/engine-api/game/Resources";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { ECONOMY_INTERVAL_TICKS } from "@openfront/engine-lib/configuration/Config";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
@@ -234,7 +235,15 @@ export class PlayerImpl implements Player {
     return this._resources;
   }
 
-  packResources(_out: number[]): void {}
+  packResources(out: number[]): void {
+    const res = this._resources;
+    if (!res.dirty) return;
+    out.push(this._smallID, res.growthMultiplier, res.shortageMask);
+    for (let r = 0; r < NUM_RESOURCES; r++) {
+      out.push(res.stock[r], res.net[r], res.production[r], res.consumption[r]);
+    }
+    res.dirty = false;
+  }
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
@@ -1874,9 +1883,16 @@ export class PlayerImpl implements Player {
   }
 
   hash(): number {
+    let stockHash = 0;
+    if (this.mg.economy() !== null) {
+      let total = 0;
+      for (let r = 0; r < NUM_RESOURCES; r++) total += this._resources.stock[r];
+      stockHash = Math.floor(total);
+    }
     return (
       simpleHash(this.id()) * (this.troops() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0) +
+      stockHash
     );
   }
   toString(): string {

@@ -9,6 +9,7 @@ import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
 import { EngineConfig } from "../configuration/EngineConfig";
+import type { EconomySystem } from "../game/economy/EconomySystem";
 import { Execution, Game, Player } from "../game/Game";
 import {
   bumpTraversalGeneration,
@@ -61,6 +62,7 @@ export class PlayerExecution implements Execution {
 
   private config: EngineConfig;
   private lastCalc = 0;
+  private economy: EconomySystem | null = null;
   private mg: Game;
   // Direct GameMap reference to skip the Game delegation hop in hot loops.
   private map: GameMap;
@@ -79,6 +81,7 @@ export class PlayerExecution implements Execution {
     this.mg = mg;
     this.map = mg.map();
     this.config = mg.config();
+    this.economy = mg.economy();
     this.lastCalc =
       ticks + (simpleHash(this.player.id()) % this.ticksPerClusterCalc);
   }
@@ -125,7 +128,14 @@ export class PlayerExecution implements Execution {
     }
 
     const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
+    this.player.addTroops(
+      this.economy === null
+        ? troopInc
+        : this.config.effectiveTroopIncreaseRate(
+            troopInc,
+            this.player.resources().growthMultiplier,
+          ),
+    );
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 
@@ -147,6 +157,8 @@ export class PlayerExecution implements Execution {
         this.player.stopEmbargo(embargo.target);
       }
     }
+
+    if (this.economy !== null) this.economy.tickPlayer(this.player, ticks);
 
     if (
       ticks - this.lastCalc > this.ticksPerClusterCalc ||
@@ -1478,6 +1490,7 @@ export class PlayerExecution implements Execution {
       this.map = r.game.map();
       this.config = r.game.config();
     }
+    this.economy = s.initialized ? r.game.economy() : null;
     this.lastCalc = s.lastCalc;
     // Scratch neighbor buffers: always written before they are read.
     this.nbuf = [0, 0, 0, 0];
