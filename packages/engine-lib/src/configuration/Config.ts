@@ -86,9 +86,9 @@ const OVERTIME_DEFAULTS = {
 };
 
 export interface FoodTuning {
-  productionPerTile: readonly number[]; // per tick, by land class: [plains, highland, mountain]
-  baseProductionPerTick: number; // flat per player
-  needPerTroopPerTick: number; // c
+  productionPerTilePerSecond: readonly number[]; // per second, by land class: [plains, highland, mountain]
+  baseProductionPerSecond: number; // flat per player, per second
+  needPerTroopPerSecond: number; // food per second per troop (home-equivalent)
   awayNeedMultiplier: number; // 3
   satiationMin: number; // 0.5
   satiationMax: number; // 1.5
@@ -98,9 +98,9 @@ export interface FoodTuning {
 }
 export const ECONOMY_INTERVAL_TICKS = 10;
 const FOOD_DEFAULTS: FoodTuning = Object.freeze({
-  productionPerTile: Object.freeze([7, 3, 1]),
-  baseProductionPerTick: 0,
-  needPerTroopPerTick: 0.02,
+  productionPerTilePerSecond: Object.freeze([0.07, 0.03, 0.01]),
+  baseProductionPerSecond: 0,
+  needPerTroopPerSecond: 0.0002,
   awayNeedMultiplier: 3,
   satiationMin: 0.5,
   satiationMax: 1.5,

@@ -11,18 +11,24 @@ export type ResourceReadoutVariant = "hud" | "compact" | "panel";
 
 const ICONS: readonly string[] = ["🌾"];
 
+/** Small food values (per-second rates, low stocks) keep one decimal; 100 and up use renderNumber. */
+export function formatResourceAmount(n: number): string {
+  const v = Math.abs(n);
+  return v < 99.95 ? v.toFixed(1) : renderNumber(v);
+}
+
 function formatRate(perSecond: number): string {
   const sign = perSecond >= 0 ? "+" : "-";
-  return `${sign}${renderNumber(Math.abs(perSecond))}/s`;
+  return `${sign}${formatResourceAmount(perSecond)}/s`;
 }
 
 function tooltip(player: PlayerView, r: ResourceType): string {
   const parts = [
     translateText("resource_panel.production", {
-      amount: renderNumber(player.resourceProductionPerSecond(r)),
+      amount: formatResourceAmount(player.resourceProductionPerSecond(r)),
     }),
     translateText("resource_panel.consumption", {
-      amount: renderNumber(player.resourceConsumptionPerSecond(r)),
+      amount: formatResourceAmount(player.resourceConsumptionPerSecond(r)),
     }),
     translateText("resource_panel.growth", {
       percent: Math.round(player.growthMultiplier() * 100),
@@ -73,7 +79,9 @@ export function renderResourceChips(
       translate="no"
     >
       <span>${ICONS[r] ?? ""}</span>
-      <span class="tabular-nums">${renderNumber(player.resourceStock(r))}</span>
+      <span class="tabular-nums"
+        >${formatResourceAmount(player.resourceStock(r))}</span
+      >
       ${variant === "compact"
         ? ""
         : html`<span

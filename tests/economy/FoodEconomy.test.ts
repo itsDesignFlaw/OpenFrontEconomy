@@ -25,14 +25,20 @@ describe("food economy", () => {
     const { game, a } = await twoBots();
     a.resources().terrainCounts.set([10, 20, 30]);
     run(game, 10);
-    expect(a.resources().production[FOOD]).toBe(10 * 7 + 20 * 3 + 30 * 1);
+    // Config is per second; 100 ms ticks make the per-tick rates 0.007 / 0.003 / 0.001.
+    expect(a.resources().production[FOOD]).toBeCloseTo(
+      10 * 0.007 + 20 * 0.003 + 30 * 0.001,
+      9,
+    );
   });
 
   test("away troops count triple toward need", async () => {
     const { game, a } = await twoBots();
     a.resources().terrainCounts.fill(0);
     run(game, 10);
-    const c = game.config().foodTuning().needPerTroopPerTick;
+    const c =
+      game.config().foodTuning().needPerTroopPerSecond *
+      (game.config().msPerTick() / 1000);
     const homeOnly = a.troops();
     const levelNow = a.resources().levels[FOOD];
     // Troops grew since the last evaluation, so allow a few percent.
@@ -141,9 +147,14 @@ describe("food economy", () => {
     expect(waited).toBeLessThanOrEqual(10);
     r.terrainCounts.set([2, 0, 0]);
     run(game, waited === 10 ? 9 : 9);
-    expect(r.production[FOOD]).toBe(7);
+    expect(r.production[FOOD]).toBeCloseTo(0.007, 9);
     run(game, 1);
-    expect(r.production[FOOD]).toBe(14);
+    expect(r.production[FOOD]).toBeCloseTo(0.014, 9);
+  });
+
+  test("starting stockpile is 180 s of need at 25k troops (900 food)", async () => {
+    const { game } = await twoBots();
+    expect(game.economy()!.startingStockpile(25_000)[FOOD]).toBeCloseTo(900, 6);
   });
 
   test("identical games hash identically", async () => {

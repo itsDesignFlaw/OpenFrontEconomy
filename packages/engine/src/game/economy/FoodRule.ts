@@ -15,6 +15,10 @@ export class FoodRule implements ResourceRule {
   /** Share of the satiation gap closed per economy tick. */
   private readonly k: number;
   private readonly lossPerTick: number;
+  /** Config rates are per second; internal state and hot paths use per tick. */
+  private readonly baseProdPerTick: number;
+  private readonly prodPerTilePerTick: readonly number[];
+  private readonly needPerTroopPerTick: number;
 
   constructor(
     private readonly config: EngineConfig,
@@ -23,13 +27,19 @@ export class FoodRule implements ResourceRule {
     this.t = config.foodTuning();
     this.k = 1 - pow(1 - this.t.satiationApproachPerSecond, intervalSeconds);
     this.lossPerTick = this.t.starvationLossPerSecond / TICKS_PER_SECOND;
+    const secondsPerTick = config.msPerTick() / 1000;
+    this.baseProdPerTick = this.t.baseProductionPerSecond * secondsPerTick;
+    this.prodPerTilePerTick = this.t.productionPerTilePerSecond.map(
+      (r) => r * secondsPerTick,
+    );
+    this.needPerTroopPerTick = this.t.needPerTroopPerSecond * secondsPerTick;
   }
 
   evaluate(ctx: EconomyContext, res: PlayerResources): void {
     const t = this.t;
-    let prod = t.baseProductionPerTick;
+    let prod = this.baseProdPerTick;
     for (let c = 0; c < res.terrainCounts.length; c++) {
-      prod += res.terrainCounts[c] * t.productionPerTile[c];
+      prod += res.terrainCounts[c] * this.prodPerTilePerTick[c];
     }
     res.production[FOOD] = prod;
 
@@ -44,7 +54,7 @@ export class FoodRule implements ResourceRule {
     }
 
     const weighted = ctx.troopsHome + t.awayNeedMultiplier * ctx.troopsAway;
-    const need = t.needPerTroopPerTick * weighted;
+    const need = this.needPerTroopPerTick * weighted;
     let target = t.satiationMax;
     if (need > 0) {
       target = prod / need;
@@ -57,7 +67,8 @@ export class FoodRule implements ResourceRule {
     res.consumption[FOOD] = cons;
     res.net[FOOD] = prod - cons;
     ctx.growthMultiplier *= level;
-    res.unfedPerUnit[FOOD] = need > 0 ? 1 / (t.needPerTroopPerTick * level) : 0;
+    res.unfedPerUnit[FOOD] =
+      need > 0 ? 1 / (this.needPerTroopPerTick * level) : 0;
     res.homeShare = weighted > 0 ? ctx.troopsHome / weighted : 1;
   }
 

@@ -33,7 +33,7 @@ export class EconomySystem {
   private readonly rules: ResourceRule[] = [];
   private readonly intervalSeconds: number;
   private readonly startingSeconds: number;
-  private readonly needPerTroop: number;
+  private readonly needPerTroopPerSecond: number;
   // Reused every call: no allocation in tickPlayer.
   private readonly ctx: EconomyContext = {
     player: null as unknown as Player,
@@ -57,7 +57,7 @@ export class EconomySystem {
     }
     const f = config.foodTuning();
     this.startingSeconds = f.startingStockpileSeconds;
-    this.needPerTroop = f.needPerTroopPerTick;
+    this.needPerTroopPerSecond = f.needPerTroopPerSecond;
   }
 
   /** PlayerExecution, every tick after troop growth. */
@@ -75,7 +75,7 @@ export class EconomySystem {
   startingStockpile(startTroops: number): number[] {
     const out = new Array<number>(NUM_RESOURCES).fill(0);
     out[ResourceType.Food] =
-      this.startingSeconds * TICKS_PER_SECOND * this.needPerTroop * startTroops;
+      this.startingSeconds * this.needPerTroopPerSecond * startTroops;
     return out;
   }
 
