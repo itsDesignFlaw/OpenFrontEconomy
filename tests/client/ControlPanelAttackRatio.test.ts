@@ -58,6 +58,7 @@ describe("control-panel attack ratio", () => {
     panel.game = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+      config: () => ({ resourcesEnabled: () => false }),
     } as unknown as GameView;
 
     panel.setVisibile(true);
@@ -84,6 +85,7 @@ describe("control-panel attack ratio", () => {
     panel.game = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+      config: () => ({ resourcesEnabled: () => false }),
     } as unknown as GameView;
     new UserSettings().setAttackRatio(0.5);
 
@@ -106,6 +108,7 @@ describe("control-panel attack ratio", () => {
     panel.game = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+      config: () => ({ resourcesEnabled: () => false }),
     } as unknown as GameView;
     new UserSettings().setAttackRatio(0.5);
 
