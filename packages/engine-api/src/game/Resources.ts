@@ -23,7 +23,11 @@ export function landClassOfMagnitude(m: number): number {
 export const RES_PACK_SMALL_ID = 0,
   RES_PACK_GROWTH = 1,
   RES_PACK_SHORTAGE = 2,
-  RES_PACK_HEADER = 3;
+  /** Smoothed fed fraction in [0, 1], minimum over resources; scales growth. */
+  RES_PACK_FED = 3,
+  /** Troops lost to shortage per tick (home and away combined). */
+  RES_PACK_STARVE = 4,
+  RES_PACK_HEADER = 5;
 export const RES_PACK_PER_RESOURCE = 4;
 export const RES_FIELD_STOCK = 0,
   RES_FIELD_NET = 1,

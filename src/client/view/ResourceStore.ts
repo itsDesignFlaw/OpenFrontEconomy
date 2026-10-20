@@ -4,9 +4,11 @@ import {
   RES_FIELD_NET,
   RES_FIELD_PROD,
   RES_FIELD_STOCK,
+  RES_PACK_FED,
   RES_PACK_GROWTH,
   RES_PACK_SHORTAGE,
   RES_PACK_SMALL_ID,
+  RES_PACK_STARVE,
   RES_PACK_STRIDE,
   ResourceType,
   resPackOffset,
@@ -20,6 +22,8 @@ interface Entry {
   sampleTick: number;
   growth: number;
   shortageMask: number;
+  fed: number;
+  starvePerTick: number;
   /** [stock, netPerTick, prodPerTick, consPerTick] per resource. */
   fields: Float64Array;
 }
@@ -50,6 +54,8 @@ export class ResourceStore {
         sampleTick: tick,
         growth: packed[o + RES_PACK_GROWTH],
         shortageMask: packed[o + RES_PACK_SHORTAGE],
+        fed: packed[o + RES_PACK_FED],
+        starvePerTick: packed[o + RES_PACK_STARVE],
         fields,
       });
     }
@@ -89,6 +95,20 @@ export class ResourceStore {
 
   growthMultiplier(smallID: number): number {
     return this.entries.get(smallID)?.growth ?? 1;
+  }
+
+  /** Fed fraction in [0, 1]; 1 when unknown. */
+  fed(smallID: number): number {
+    return this.entries.get(smallID)?.fed ?? 1;
+  }
+
+  /** Troops lost to shortage per tick; 0 when unknown. */
+  starvationPerTick(smallID: number): number {
+    return this.entries.get(smallID)?.starvePerTick ?? 0;
+  }
+
+  starvationPerSecond(smallID: number): number {
+    return this.starvationPerTick(smallID) * TICKS_PER_SECOND;
   }
 
   isShort(smallID: number, r: ResourceType): boolean {

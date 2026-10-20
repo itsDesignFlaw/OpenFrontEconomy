@@ -189,6 +189,18 @@ export class Config {
   effectiveTroopIncreaseRate(base: number, growthMultiplier: number): number {
     return base > 0 ? base * growthMultiplier : base;
   }
+  /** Net troop change per tick: growth scaled by satiation and fed fraction, minus starvation. */
+  netTroopRate(
+    base: number,
+    growthMultiplier: number,
+    fed: number,
+    starvePerTick: number,
+  ): number {
+    return (
+      this.effectiveTroopIncreaseRate(base, growthMultiplier * fed) -
+      starvePerTick
+    );
+  }
   spawnImmunityDuration(): Tick {
     return (
       this._gameConfig.spawnImmunityDuration ?? DEFAULT_SPAWN_IMMUNITY_TICKS

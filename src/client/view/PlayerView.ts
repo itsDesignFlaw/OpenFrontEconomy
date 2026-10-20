@@ -467,6 +467,15 @@ export class PlayerView implements PlayerLike {
   growthMultiplier(): number {
     return this.game.resources.growthMultiplier(this.smallID());
   }
+  resourceFed(): number {
+    return this.game.resources.fed(this.smallID());
+  }
+  starvationPerTick(): number {
+    return this.game.resources.starvationPerTick(this.smallID());
+  }
+  starvationPerSecond(): number {
+    return this.game.resources.starvationPerSecond(this.smallID());
+  }
   gold(): Gold {
     // Engine Gold is bigint; renderer state stores number. Convert back at the
     // accessor for game-code that still expects bigint semantics.
