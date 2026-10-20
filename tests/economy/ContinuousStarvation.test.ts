@@ -52,7 +52,8 @@ describe("continuous starvation", () => {
     }
     // Fed falls through intermediate values instead of jumping to starvation.
     expect(minFed).toBeLessThan(0.9);
-    expect(maxStep).toBeLessThan(0.4 * Math.max(1, base));
+    // Fed moves every tick, so no tick-to-tick jump is more than a small share of growth.
+    expect(maxStep).toBeLessThan(0.08 * Math.max(1, base));
   });
 
   test("a starving population converges to zero net growth", async () => {

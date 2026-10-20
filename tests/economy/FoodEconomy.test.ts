@@ -115,7 +115,8 @@ describe("food economy", () => {
     game.addExecution(new AttackExecution(8000, a, game.terraNullius().id()));
     run(game, 100);
     expect(r.lossAccAway + r.starved).toBeGreaterThan(0);
-    expect(r.growthMultiplier).toBeCloseTo(r.levels[FOOD], 9);
+    // The multiplier steps toward the level each tick, catching up by the next economy tick.
+    expect(Math.abs(r.growthMultiplier - r.levels[FOOD])).toBeLessThan(0.01);
     expect(r.levels[FOOD]).toBeLessThan(1);
   });
 

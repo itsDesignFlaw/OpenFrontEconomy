@@ -26,6 +26,10 @@ export const PlayerResourcesSnapshot = snapshotType({
       fed: new Array(NUM_RESOURCES).fill(1),
       starveRate: 0,
       structuralNeed: new Array(NUM_RESOURCES).fill(0),
+      fedStep: new Array(NUM_RESOURCES).fill(0),
+      consNeeded: new Array(NUM_RESOURCES).fill(0),
+      starveCoef: new Array(NUM_RESOURCES).fill(0),
+      growthStep: 0,
     }),
   },
   schema: z.object({
@@ -39,6 +43,10 @@ export const PlayerResourcesSnapshot = snapshotType({
     fed: z.array(zNum()),
     starveRate: zNum(),
     structuralNeed: z.array(zNum()),
+    fedStep: z.array(zNum()),
+    consNeeded: z.array(zNum()),
+    starveCoef: z.array(zNum()),
+    growthStep: zNum(),
     growthMultiplier: zNum(),
     shortageMask: zInt(),
     homeShare: zNum(),
@@ -64,6 +72,10 @@ export function defaultPlayerResourcesData(phase = 0): PlayerResourcesState {
     fed: new Array(NUM_RESOURCES).fill(1),
     starveRate: 0,
     structuralNeed: new Array(NUM_RESOURCES).fill(0),
+    fedStep: new Array(NUM_RESOURCES).fill(0),
+    consNeeded: new Array(NUM_RESOURCES).fill(0),
+    starveCoef: new Array(NUM_RESOURCES).fill(0),
+    growthStep: 0,
     growthMultiplier: 1,
     shortageMask: 0,
     homeShare: 1,
@@ -92,6 +104,14 @@ export class PlayerResources {
   starveRate = 0;
   /** Per tick need if every troop counted 1x (UI/AI). */
   structuralNeed: Float64Array = new Float64Array(NUM_RESOURCES);
+  /** Per-tick change of fed until the next economy tick, so fed moves every tick. */
+  fedStep: Float64Array = new Float64Array(NUM_RESOURCES);
+  /** Consumption per tick at full feeding (need × satiation). */
+  consNeeded: Float64Array = new Float64Array(NUM_RESOURCES);
+  /** Troops lost per tick per unit of unfed fraction. */
+  starveCoef: Float64Array = new Float64Array(NUM_RESOURCES);
+  /** Per-tick change of growthMultiplier until the next economy tick. */
+  growthStep = 0;
   /** Product of the rules' growth factors, init 1. */
   growthMultiplier = 1;
   /** Bit r set: resource r fed fraction below 0.99. */
@@ -153,6 +173,10 @@ export class PlayerResources {
       fed: Array.from(this.fed),
       starveRate: this.starveRate,
       structuralNeed: Array.from(this.structuralNeed),
+      fedStep: Array.from(this.fedStep),
+      consNeeded: Array.from(this.consNeeded),
+      starveCoef: Array.from(this.starveCoef),
+      growthStep: this.growthStep,
       growthMultiplier: this.growthMultiplier,
       shortageMask: this.shortageMask,
       homeShare: this.homeShare,
@@ -176,6 +200,10 @@ export class PlayerResources {
     this.fed = Float64Array.from(s.fed);
     this.starveRate = s.starveRate;
     this.structuralNeed = Float64Array.from(s.structuralNeed);
+    this.fedStep = Float64Array.from(s.fedStep);
+    this.consNeeded = Float64Array.from(s.consNeeded);
+    this.starveCoef = Float64Array.from(s.starveCoef);
+    this.growthStep = s.growthStep;
     this.growthMultiplier = s.growthMultiplier;
     this.shortageMask = s.shortageMask;
     this.homeShare = s.homeShare;

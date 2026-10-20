@@ -27,7 +27,7 @@ export interface ResourceRule {
   readonly type: ResourceType;
   /**
    * Fills production/consumption/net/levels/fed/structuralNeed[type], sets
-   * homeShare and adds its per tick starvation to res.starveRate.
+   * homeShare, and the per-tick fedStep/consNeeded/starveCoef that applyTick uses.
    */
   evaluate(ctx: EconomyContext, res: PlayerResources): void;
 }
@@ -98,26 +98,37 @@ export class EconomySystem {
     ctx.troopsHome = player.troops();
     ctx.troopsAway = away;
     ctx.growthMultiplier = 1;
-    res.starveRate = 0;
     for (let i = 0; i < this.rules.length; i++) {
       this.rules[i].evaluate(ctx, res);
     }
-    res.growthMultiplier = ctx.growthMultiplier;
+    // Reach the new multiplier by the next economy tick in per-tick steps.
+    res.growthStep =
+      (ctx.growthMultiplier - res.growthMultiplier) / this.intervalTicks;
     let mask = 0;
     for (let i = 0; i < this.rules.length; i++) {
       const r = this.rules[i].type;
-      if (res.fed[r] < SHORT_FED) mask |= 1 << r;
+      // Judged on where fed is heading this interval.
+      const fedEnd = res.fed[r] + res.fedStep[r] * this.intervalTicks;
+      if (fedEnd < SHORT_FED) mask |= 1 << r;
     }
     res.shortageMask = mask;
     ctx.player = null as unknown as Player;
   }
 
   private applyTick(player: Player, res: PlayerResources): void {
+    res.growthMultiplier += res.growthStep;
+    let starve = 0;
     for (let i = 0; i < this.rules.length; i++) {
       const r = this.rules[i].type;
-      const stock = res.stock[r] + res.net[r];
+      let f = res.fed[r] + res.fedStep[r];
+      if (f > 1) f = 1;
+      else if (f < 0) f = 0;
+      res.fed[r] = f;
+      const stock = res.stock[r] + res.production[r] - res.consNeeded[r] * f;
       res.stock[r] = stock > 0 ? stock : 0;
+      starve += res.starveCoef[r] * (1 - f);
     }
+    res.starveRate = starve;
     if (res.starveRate > 0) {
       res.lossAccHome += res.starveRate * res.homeShare;
       res.lossAccAway += res.starveRate * (1 - res.homeShare);

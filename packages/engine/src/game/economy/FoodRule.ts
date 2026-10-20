@@ -52,6 +52,9 @@ export class FoodRule implements ResourceRule {
       res.consumption[FOOD] = 0;
       res.net[FOOD] = prod;
       res.fed[FOOD] = 1;
+      res.fedStep[FOOD] = 0;
+      res.consNeeded[FOOD] = 0;
+      res.starveCoef[FOOD] = 0;
       res.structuralNeed[FOOD] = 0;
       res.unfedPerUnit[FOOD] = 0;
       res.homeShare = 1;
@@ -74,15 +77,17 @@ export class FoodRule implements ResourceRule {
       const available = prod + res.stock[FOOD] / ctx.intervalTicks;
       fTarget = Math.min(1, available / consNeeded);
     }
+    // fed reaches f by the next economy tick in equal per-tick steps.
     const f = res.fed[FOOD] + (fTarget - res.fed[FOOD]) * this.kFed;
-    res.fed[FOOD] = f;
+    res.fedStep[FOOD] = (f - res.fed[FOOD]) / ctx.intervalTicks;
+    res.consNeeded[FOOD] = consNeeded;
+    res.starveCoef[FOOD] = this.lossPerTick * weighted;
     const cons = consNeeded * f;
     res.consumption[FOOD] = cons;
     res.net[FOOD] = prod - cons;
     res.structuralNeed[FOOD] =
       this.needPerTroopPerTick * (ctx.troopsHome + ctx.troopsAway);
     ctx.growthMultiplier *= level;
-    res.starveRate += this.lossPerTick * weighted * (1 - f);
     res.unfedPerUnit[FOOD] =
       need > 0 ? 1 / (this.needPerTroopPerTick * level) : 0;
     res.homeShare = weighted > 0 ? ctx.troopsHome / weighted : 1;
