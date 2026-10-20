@@ -1113,12 +1113,14 @@ describe("NationStructureBehavior.doHandleStructures — crowded-map exception",
       sharedWaterComponents: () => null, // landlocked -> Factory preferred
       nations: () => Array(400).fill({}),
       numLandTiles: () => 1_000_000, // 400 / 1_000_000 > 1/7500 -> high density
+      economy: () => null,
     };
   }
 
   function makeCrowdedPlayer(): any {
     return {
       unitsOwned: () => 0, // never owns a city
+      type: () => PlayerType.Nation,
       numTilesOwned: () => 100_000,
       info: () => ({}),
     };

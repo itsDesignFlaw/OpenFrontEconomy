@@ -57,6 +57,11 @@ import {
 import type { NationWarshipBehavior } from "../nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
+import {
+  hungerThresholdScale,
+  resourcePressure,
+  resourceValuePerTile,
+} from "./ResourceAdvisor";
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
@@ -632,12 +637,23 @@ export class AiAttackBehavior {
   private hasReserveRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
     const ratio = this.player.troops() / maxTroops;
-    return ratio >= this.reserveRatio;
+    return ratio >= this.reserveRatio * this.hungerScale();
   }
 
   private hasTriggerRatioTroops(expansion = false): boolean {
     const ratio = this.player.troops() / this.reserveBasis(expansion);
-    return ratio >= this.triggerRatio;
+    return ratio >= this.triggerRatio * this.hungerScale();
+  }
+
+  // 1 unless this is a hungry nation: a starving nation spends troops sooner
+  private hungerScale(): number {
+    if (
+      this.player.type() !== PlayerType.Nation ||
+      this.game.economy() === null
+    ) {
+      return 1;
+    }
+    return hungerThresholdScale(resourcePressure(this.game, this.player));
   }
 
   // The max troops troop ratios refer to. With high starting gold, cities don't hold back
@@ -1014,7 +1030,24 @@ export class AiAttackBehavior {
     const candidates = enemies.filter(
       (enemy) => enemy.troops() <= this.player.troops() * 0.75,
     );
-    return findJuiciestTarget(this.game, candidates);
+    if (
+      this.player.type() !== PlayerType.Nation ||
+      this.game.economy() === null
+    ) {
+      return findJuiciestTarget(this.game, candidates);
+    }
+    const pressure = resourcePressure(this.game, this.player);
+    if (pressure === 0) return findJuiciestTarget(this.game, candidates);
+    const values = new Map<Player, number>();
+    let maxValue = 0;
+    for (const c of candidates) {
+      const v = resourceValuePerTile(this.game, c);
+      values.set(c, v);
+      if (v > maxValue) maxValue = v;
+    }
+    return findJuiciestTarget(this.game, candidates, (p) =>
+      maxValue > 0 ? (pressure * (values.get(p) ?? 0)) / maxValue : 0,
+    );
   }
 
   private findNearestIslandEnemy(): Player | null {

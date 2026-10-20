@@ -92,6 +92,7 @@ function randTerritoryTile(
 export function findJuiciestTarget(
   game: Game,
   candidates: Player[],
+  extraScore?: (p: Player) => number,
 ): Player | null {
   if (candidates.length === 0) return null;
 
@@ -134,7 +135,8 @@ export function findJuiciestTarget(
     const juiciness =
       normalize(s.structureCount, structureCounts) +
       normalize(s.troopGapRatio, troopGapRatios) +
-      normalize(s.tiles, tileCounts);
+      normalize(s.tiles, tileCounts) +
+      (extraScore ? extraScore(s.player) : 0);
     if (juiciness > bestScore) {
       bestScore = juiciness;
       best = s.player;
