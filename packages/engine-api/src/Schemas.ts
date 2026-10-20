@@ -227,6 +227,11 @@ export const OvertimeConfigSchema = z.object({
   startMinutes: zb.uint({ min: 1, max: 120 }).optional(),
 });
 
+// Optional economy resources. Each key switches one resource rule on (all off
+// by default). New resources append fields here; safe because all peers run
+// the same build.
+export const ResourcesConfigSchema = z.object({ food: z.boolean().optional() });
+
 // A lobby pool: several lobbies that arriving players are spread across, so
 // one advertised entry point can absorb more players than a single lobby
 // holds. Assignment is a hash of the joiner's identity (server/PoolRouting.ts),
@@ -266,6 +271,7 @@ export const GameConfigSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
   overtime: OvertimeConfigSchema.optional(),
+  resources: ResourcesConfigSchema.optional(),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean().optional(),

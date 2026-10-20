@@ -7,6 +7,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { ResourceType } from "@openfront/engine-api/game/Resources";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
@@ -84,6 +85,30 @@ const OVERTIME_DEFAULTS = {
   dropPercentPerMinute: 2,
 };
 
+export interface FoodTuning {
+  productionPerTile: readonly number[]; // per tick, by land class: [plains, highland, mountain]
+  baseProductionPerTick: number; // flat per player
+  needPerTroopPerTick: number; // c
+  awayNeedMultiplier: number; // 3
+  satiationMin: number; // 0.5
+  satiationMax: number; // 1.5
+  satiationApproachPerSecond: number; // share of the gap to target closed per second
+  startingStockpileSeconds: number; // seconds of base need at start troops
+  starvationLossPerSecond: number; // share of unfed troops lost per second
+}
+export const ECONOMY_INTERVAL_TICKS = 10;
+const FOOD_DEFAULTS: FoodTuning = Object.freeze({
+  productionPerTile: Object.freeze([7, 3, 1]),
+  baseProductionPerTick: 0,
+  needPerTroopPerTick: 0.02,
+  awayNeedMultiplier: 3,
+  satiationMin: 0.5,
+  satiationMax: 1.5,
+  satiationApproachPerSecond: 0.2,
+  startingStockpileSeconds: 180,
+  starvationLossPerSecond: 0.02,
+});
+
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
@@ -142,6 +167,27 @@ export class Config {
       // The drop rate is internal (not wire-configurable): always the default.
       dropPercentPerMinute: d.dropPercentPerMinute,
     };
+  }
+  /** True when any resource rule is switched on. */
+  resourcesEnabled(): boolean {
+    return this.isResourceEnabled(ResourceType.Food);
+  }
+  isResourceEnabled(r: ResourceType): boolean {
+    switch (r) {
+      case ResourceType.Food:
+        return this._gameConfig.resources?.food ?? false;
+      default:
+        return assertNever(r);
+    }
+  }
+  foodTuning(): FoodTuning {
+    return FOOD_DEFAULTS;
+  }
+  economyIntervalTicks(): number {
+    return ECONOMY_INTERVAL_TICKS;
+  }
+  effectiveTroopIncreaseRate(base: number, growthMultiplier: number): number {
+    return base > 0 ? base * growthMultiplier : base;
   }
   spawnImmunityDuration(): Tick {
     return (

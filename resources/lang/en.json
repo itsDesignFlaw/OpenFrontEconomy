@@ -1014,6 +1014,7 @@
     "custom_alliances": "Alliance Duration",
     "disable_units": "Disable Units",
     "doomsday_clock": "Doomsday Clock",
+    "food": "Food economy (experimental)",
     "gold_multiplier": "Gold multiplier",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
@@ -2151,6 +2152,18 @@
     "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
     "unverified": "This game's record has no checks, so this replay couldn't be verified against the game that was played.",
     "watch_classic": "Watch the old replay instead"
+  },
+  "resource_panel": {
+    "consumption": "Consumption: {amount}/s",
+    "deficit": "Deficit",
+    "food": "Food",
+    "growth": "Troop growth: {percent}%",
+    "production": "Production: {amount}/s",
+    "runway": "Runs out in {time}",
+    "starved_total": "Lost to starvation: {troops}",
+    "starving": "Starving",
+    "starving_warning": "Your troops are starving! Take farmland or recall attacks.",
+    "surplus": "Surplus"
   },
   "reward_track": {
     "after_level": "After level {level}",

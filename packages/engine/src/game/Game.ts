@@ -46,6 +46,8 @@ import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
+import type { EconomySystem } from "./economy/EconomySystem";
+import type { PlayerResources } from "./economy/PlayerResources";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
@@ -308,6 +310,9 @@ export interface DisconnectSnapshot {
 }
 
 export interface Player extends PlayerLike {
+  resources(): PlayerResources;
+  /** Appends this player's packed economy record (see Resources.ts). */
+  packResources(out: number[]): void;
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
@@ -561,6 +566,9 @@ export interface Game extends GameLike {
   drainPackedMotionPlans(): Uint32Array | null;
   drainPackedPlayerUpdates(): Float64Array | null;
   drainPackedAttackUpdates(): Float64Array | null;
+  drainPackedResourceUpdates(): Float64Array | null;
+  /** Null when no resource is enabled. */
+  economy(): EconomySystem | null;
   // null ends the game with no winner (a cancelled match, e.g. a ranked game
   // that didn't fill): the record is archived winnerless and never ranked.
   setWinner(

@@ -75,6 +75,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { EconomySystem } from "./economy/EconomySystem";
 import {
   Alliance,
   AllianceRequest,
@@ -166,6 +167,10 @@ export class GameImpl implements Game {
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
   /** Tiles from nuke blast radii this tick, drained by the renderer. */
   private _nukeImpactQueue: TileRef[] = [];
+  /** Null when no resource is enabled. Built before players are added. */
+  private readonly _economy: EconomySystem | null =
+    this._config.resourcesEnabled() ? new EconomySystem(this._config) : null;
+  private readonly _resourcesOn = this._economy !== null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -631,6 +636,14 @@ export class GameImpl implements Game {
     const packed = Float64Array.from(quads);
     quads.length = 0;
     return packed;
+  }
+
+  drainPackedResourceUpdates(): Float64Array | null {
+    return null;
+  }
+
+  economy(): EconomySystem | null {
+    return this._economy;
   }
 
   recordMotionPlan(record: MotionPlanRecord): void {

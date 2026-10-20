@@ -141,6 +141,8 @@ export const DERIVED_FIELDS = new Set<string>([
   "unitCountMemo",
   "unitsByTypeMemo",
   "borderNbuf",
+  // PlayerResources
+  "dirty",
   // PlayerImpl
   "lastSentUpdate",
   "myUnitsMemo",

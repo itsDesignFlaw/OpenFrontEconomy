@@ -33,11 +33,13 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { ClientID } from "@openfront/engine-api/Schemas";
+import { ECONOMY_INTERVAL_TICKS } from "@openfront/engine-lib/configuration/Config";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   snapshotType,
+  VersionedSchema,
   zInt,
   zNum,
   zPlayerRef,
@@ -66,6 +68,10 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { AttackImpl } from "./AttackImpl";
+import {
+  defaultPlayerResourcesData,
+  PlayerResources,
+} from "./economy/PlayerResources";
 import {
   Alliance,
   AllianceRequest,
@@ -199,6 +205,7 @@ export class PlayerImpl implements Player {
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
   private _disconnectSnapshot: DisconnectSnapshot | null = null;
+  private _resources: PlayerResources;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -217,7 +224,17 @@ export class PlayerImpl implements Player {
     this._troops = toInt(startTroops);
     this._gold = mg.config().startingGold(playerInfo);
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
+    this._resources = new PlayerResources(
+      simpleHash(playerInfo.id) % ECONOMY_INTERVAL_TICKS,
+      mg.economy()?.startingStockpile(startTroops) ?? null,
+    );
   }
+
+  resources(): PlayerResources {
+    return this._resources;
+  }
+
+  packResources(_out: number[]): void {}
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
@@ -2025,6 +2042,7 @@ export class PlayerImpl implements Player {
       disconnectSnapshot: this._disconnectSnapshot
         ? { ...this._disconnectSnapshot }
         : null,
+      resources: this._resources.snapshot(w),
       // Never assigned until the first PlayerExecution tick; keep that apart
       // from an explicit null.
       largestClusterBoundingBox: box
@@ -2102,6 +2120,9 @@ export class PlayerImpl implements Player {
     this._disconnectSnapshot = s.disconnectSnapshot
       ? { ...s.disconnectSnapshot }
       : null;
+    const pr = Object.create(PlayerResources.prototype) as PlayerResources;
+    pr.restoreSnapshot(s.resources, r);
+    this._resources = pr;
     this.lastSentUpdate = undefined;
     const box = s.largestClusterBoundingBox;
     this.largestClusterBoundingBox = box
@@ -2117,7 +2138,11 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 had no economy state
+    1: (d) => ({ ...d, resources: { v: 1, d: defaultPlayerResourcesData() } }),
+  },
   schema: z.object({
     smallID: zInt(),
     info: PlayerInfoSchema,
@@ -2181,6 +2206,7 @@ export const PlayerSnapshot = snapshotType({
       .nullable()
       .optional(),
     numUnitsConstructed: z.array(z.tuple([UnitTypeSchema, zInt()])),
+    resources: VersionedSchema,
   }),
 });
 export type PlayerState = z.infer<typeof PlayerSnapshot.schema>;

@@ -103,6 +103,7 @@ export const VIEW_DATA_ROUTING: Record<
   packedMotionPlans: "normalizer",
   packedPlayerUpdates: "normalizer",
   packedAttackUpdates: "normalizer",
+  packedResourceUpdates: "dropped",
   playerNameViewData: "normalizer",
   packedNukeImpacts: "events",
   tickExecutionDuration: "dropped",
