@@ -26,6 +26,7 @@ import type {
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { nearestTileDist, nearestTileDistCapped } from "../Util";
+import { NO_CITY_PRESSURE, resourcePressure } from "../utils/ResourceAdvisor";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import {
   hasHighStartingGold,
@@ -714,7 +715,11 @@ export class NationStructureBehavior {
       }
     }
 
-    if (!citiesDisabled && this.maybeSpawnStructure(UnitType.City)) {
+    if (
+      !citiesDisabled &&
+      !this.tooHungryForCities() &&
+      this.maybeSpawnStructure(UnitType.City)
+    ) {
       return true;
     }
 
@@ -801,6 +806,15 @@ export class NationStructureBehavior {
 
   private cost(type: UnitType, extraUnits: number = 0): Gold {
     return this.game.unitInfo(type).cost(this.game, this.player, extraUnits);
+  }
+
+  // Cities add troops that eat and produce no food
+  private tooHungryForCities(): boolean {
+    return (
+      this.player.type() === PlayerType.Nation &&
+      this.game.economy() !== null &&
+      resourcePressure(this.game, this.player) >= NO_CITY_PRESSURE
+    );
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
